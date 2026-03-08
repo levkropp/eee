@@ -139,6 +139,33 @@ fn remove_uninstall_entry() {
     }
 }
 
+fn kill_existing_instances() {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+
+    // Stop the scheduled task first so it doesn't respawn
+    let _ = std::process::Command::new("schtasks")
+        .args(["/end", "/tn", TASK_NAME])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+
+    // Kill all other eee.exe processes (exclude our own PID)
+    let our_pid = std::process::id();
+    let _ = std::process::Command::new("cmd")
+        .args([
+            "/c",
+            &format!(
+                "wmic process where \"name='eee.exe' and processid!={}\" call terminate >nul 2>&1",
+                our_pid
+            ),
+        ])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+
+    // Brief wait for file handles to release
+    std::thread::sleep(Duration::from_millis(300));
+}
+
 fn install() {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
@@ -146,6 +173,15 @@ fn install() {
     let dest_dir = install_dir();
     let dest_exe = dest_dir.join("eee.exe");
     let src_exe = std::env::current_exe().expect("cannot determine own path");
+
+    // Kill any running instances and stop the task before touching files
+    kill_existing_instances();
+
+    // Remove existing task (ignore errors)
+    let _ = std::process::Command::new("schtasks")
+        .args(["/delete", "/tn", TASK_NAME, "/f"])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
 
     // Create directory
     let _ = std::fs::create_dir_all(&dest_dir);
@@ -159,12 +195,6 @@ fn install() {
             return;
         }
     }
-
-    // Remove existing task (ignore errors)
-    let _ = std::process::Command::new("schtasks")
-        .args(["/delete", "/tn", TASK_NAME, "/f"])
-        .creation_flags(CREATE_NO_WINDOW)
-        .output();
 
     // Create scheduled task: run at logon, normal priority, no time limit
     let exe_str = dest_exe.to_string_lossy().to_string();
