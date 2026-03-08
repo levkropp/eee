@@ -152,19 +152,17 @@ fn kill_existing_instances() {
 
     // Kill all other eee.exe processes (exclude our own PID)
     let our_pid = std::process::id();
-    let _ = std::process::Command::new("cmd")
+    let _ = std::process::Command::new("taskkill")
         .args([
-            "/c",
-            &format!(
-                "wmic process where \"name='eee.exe' and processid!={}\" call terminate >nul 2>&1",
-                our_pid
-            ),
+            "/F",
+            "/IM", "eee.exe",
+            "/FI", &format!("PID ne {}", our_pid),
         ])
         .creation_flags(CREATE_NO_WINDOW)
         .output();
 
     // Brief wait for file handles to release
-    std::thread::sleep(Duration::from_millis(300));
+    std::thread::sleep(Duration::from_millis(500));
 }
 
 fn is_elevated() -> bool {
@@ -284,6 +282,12 @@ fn uninstall() {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
 
+    // Stop the running scheduled task
+    let _ = std::process::Command::new("schtasks")
+        .args(["/end", "/tn", TASK_NAME])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
+
     // Delete scheduled task
     let _ = std::process::Command::new("schtasks")
         .args(["/delete", "/tn", TASK_NAME, "/f"])
@@ -293,18 +297,19 @@ fn uninstall() {
     // Remove Add/Remove Programs entry
     remove_uninstall_entry();
 
-    // Stop other running instances (exclude our own PID)
+    // Kill all other eee.exe processes (taskkill with PID filter)
     let our_pid = std::process::id();
-    let _ = std::process::Command::new("cmd")
+    let _ = std::process::Command::new("taskkill")
         .args([
-            "/c",
-            &format!(
-                "wmic process where \"name='eee.exe' and processid!={}\" call terminate >nul 2>&1",
-                our_pid
-            ),
+            "/F",
+            "/IM", "eee.exe",
+            "/FI", &format!("PID ne {}", our_pid),
         ])
         .creation_flags(CREATE_NO_WINDOW)
         .output();
+
+    // Wait for processes to die
+    std::thread::sleep(Duration::from_millis(500));
 
     show_message("eee uninstalled successfully.", "eee - Uninstalled");
 
