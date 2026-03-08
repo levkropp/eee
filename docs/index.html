@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>eee — Restart Explorer with a hotkey</title>
+<style>
+  :root {
+    --accent: #0078D7;
+    --accent-hover: #006CBE;
+    --text: #1a1a1a;
+    --subtext: #666;
+    --bg: #f5f5f5;
+    --card: #fff;
+    --border: #e0e0e0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI Variable', 'Segoe UI', system-ui, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    line-height: 1.6;
+  }
+  .hero {
+    background: var(--card);
+    border-bottom: 1px solid var(--border);
+    padding: 80px 24px 60px;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: 48px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 12px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero p {
+    font-size: 18px;
+    color: var(--subtext);
+    max-width: 520px;
+    margin: 0 auto 32px;
+  }
+  .hero .keys {
+    display: inline-block;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 20px;
+    margin-bottom: 32px;
+    letter-spacing: 0.5px;
+  }
+  .hero .keys kbd {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 8px;
+    font-family: inherit;
+    font-size: 14px;
+    box-shadow: 0 1px 0 var(--border);
+  }
+  .btn {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-size: 16px;
+    font-weight: 600;
+    padding: 12px 32px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: var(--accent-hover); }
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    margin-left: 12px;
+  }
+  .btn-secondary:hover {
+    background: var(--accent);
+    color: #fff;
+  }
+  .screenshot {
+    max-width: 480px;
+    margin: 40px auto 0;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    overflow: hidden;
+  }
+  .screenshot img {
+    width: 100%;
+    display: block;
+  }
+  .features {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 60px 24px;
+  }
+  .features h2 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 32px;
+    text-align: center;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+  }
+  .card h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .card p {
+    font-size: 14px;
+    color: var(--subtext);
+  }
+  .install-section {
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    padding: 60px 24px;
+    text-align: center;
+  }
+  .install-section h2 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .install-section p {
+    color: var(--subtext);
+    margin-bottom: 24px;
+  }
+  .code-block {
+    display: inline-block;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    font-family: 'Cascadia Code', 'Consolas', monospace;
+    font-size: 15px;
+    padding: 12px 24px;
+    border-radius: 6px;
+    margin: 8px 0;
+  }
+  footer {
+    text-align: center;
+    padding: 32px 24px;
+    font-size: 13px;
+    color: var(--subtext);
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+  <section class="hero">
+    <h1><span>eee</span></h1>
+    <p>A tiny Windows utility that restarts Explorer with a hotkey. Hold the combo for 10 seconds — that's it.</p>
+    <div class="keys">
+      <kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>Shift</kbd> + <kbd>E</kbd> &nbsp;for 10 seconds
+    </div>
+    <br>
+    <a class="btn" href="https://github.com/levkropp/eee/releases/latest">Download</a>
+    <a class="btn btn-secondary" href="https://github.com/levkropp/eee">GitHub</a>
+    <div class="screenshot">
+      <img src="screenshot.png" alt="eee countdown overlay">
+    </div>
+  </section>
+
+  <section class="features">
+    <h2>Features</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Invisible</h3>
+        <p>No tray icon, no window. Completely silent until you need it.</p>
+      </div>
+      <div class="card">
+        <h3>Starts at login</h3>
+        <p>Installs as a scheduled task. Runs automatically, survives reboots.</p>
+      </div>
+      <div class="card">
+        <h3>Safe</h3>
+        <p>10-second hold prevents accidents. Release early to cancel.</p>
+      </div>
+      <div class="card">
+        <h3>Tiny</h3>
+        <p>~250KB single executable. No dependencies, no runtime, no installer.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="install-section">
+    <h2>Install</h2>
+    <p>Download the exe, then run:</p>
+    <div class="code-block">eee.exe install</div>
+    <p style="margin-top: 16px;">To remove:</p>
+    <div class="code-block">eee.exe uninstall</div>
+  </section>
+
+  <footer>
+    Made by <a href="https://github.com/levkropp">Lev Kropp</a> &middot; <a href="https://github.com/levkropp/eee">Source on GitHub</a> &middot; GPL-3.0
+  </footer>
+</body>
+</html>
