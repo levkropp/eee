@@ -8,21 +8,21 @@ A tiny (~250KB) Windows utility that runs silently in the background. When you h
 
 ## Install
 
-Download `eee.exe` from [Releases](https://github.com/levkropp/eee/releases), then run:
+Download `eee.exe` from [Releases](https://github.com/levkropp/eee/releases) and double-click it. That's it.
 
-```
-eee.exe install
-```
+It copies itself to `%LOCALAPPDATA%\eee\`, creates a scheduled task that starts at logon, and begins running immediately. You'll never need to think about it again.
 
-This copies itself to `%LOCALAPPDATA%\eee\` and creates a scheduled task that starts at logon. You'll never need to think about it again.
+You can also install from the command line with `eee.exe install`.
 
 ## Uninstall
+
+Open **Settings > Apps > Installed apps**, find **eee**, and click Uninstall.
+
+Or from the command line:
 
 ```
 eee.exe uninstall
 ```
-
-Removes the scheduled task and deletes installed files.
 
 ## Features
 

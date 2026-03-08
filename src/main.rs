@@ -13,6 +13,7 @@ use std::time::{Duration, Instant};
 
 use windows::Win32::Foundation::{COLORREF, HWND, LPARAM, LRESULT, RECT, WPARAM};
 use windows::Win32::Graphics::Gdi::*;
+use windows::Win32::System::Registry::*;
 use windows::Win32::System::Threading::CreateMutexW;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, VK_CONTROL, VK_MENU, VK_SHIFT,
@@ -52,6 +53,90 @@ fn install_dir() -> std::path::PathBuf {
     let local_app_data =
         std::env::var("LOCALAPPDATA").unwrap_or_else(|_| r"C:\Users\Med\AppData\Local".into());
     std::path::PathBuf::from(local_app_data).join("eee")
+}
+
+fn is_running_from_install_dir() -> bool {
+    let src_exe = std::env::current_exe().unwrap_or_default();
+    let dest_dir = install_dir();
+    let src_canonical = std::fs::canonicalize(&src_exe).unwrap_or(src_exe);
+    let dest_canonical = std::fs::canonicalize(&dest_dir).unwrap_or(dest_dir);
+    src_canonical.starts_with(&dest_canonical)
+}
+
+fn register_uninstall_entry(exe_path: &str) {
+    let key_path = to_wide(r"Software\Microsoft\Windows\CurrentVersion\Uninstall\eee");
+    let mut hkey = HKEY::default();
+
+    let result = unsafe {
+        RegCreateKeyExW(
+            HKEY_CURRENT_USER,
+            PCWSTR(key_path.as_ptr()),
+            Some(0),
+            None,
+            REG_OPTION_NON_VOLATILE,
+            KEY_WRITE,
+            None,
+            &mut hkey,
+            None,
+        )
+    };
+
+    if result.is_err() {
+        return;
+    }
+
+    let set_str = |name: &str, value: &str| {
+        let wide_name = to_wide(name);
+        let wide_value = to_wide(value);
+        let byte_len = (wide_value.len() * 2) as u32;
+        unsafe {
+            let _ = RegSetValueExW(
+                hkey,
+                PCWSTR(wide_name.as_ptr()),
+                Some(0),
+                REG_SZ,
+                Some(std::slice::from_raw_parts(
+                    wide_value.as_ptr() as *const u8,
+                    byte_len as usize,
+                )),
+            );
+        }
+    };
+
+    let set_dword = |name: &str, value: u32| {
+        let wide_name = to_wide(name);
+        unsafe {
+            let _ = RegSetValueExW(
+                hkey,
+                PCWSTR(wide_name.as_ptr()),
+                Some(0),
+                REG_DWORD,
+                Some(&value.to_le_bytes()),
+            );
+        }
+    };
+
+    set_str("DisplayName", "eee");
+    set_str("Publisher", "Lev Kropp");
+    set_str("DisplayVersion", "0.1.0");
+    set_str("UninstallString", &format!("\"{}\" uninstall", exe_path));
+    set_str("DisplayIcon", exe_path);
+    set_str("InstallLocation", &install_dir().to_string_lossy());
+    set_str("URLInfoAbout", "https://github.com/levkropp/eee");
+    set_dword("EstimatedSize", 300); // ~300 KB
+    set_dword("NoModify", 1);
+    set_dword("NoRepair", 1);
+
+    unsafe {
+        let _ = RegCloseKey(hkey);
+    }
+}
+
+fn remove_uninstall_entry() {
+    let key_path = to_wide(r"Software\Microsoft\Windows\CurrentVersion\Uninstall\eee");
+    unsafe {
+        let _ = RegDeleteKeyW(HKEY_CURRENT_USER, PCWSTR(key_path.as_ptr()));
+    }
 }
 
 fn install() {
@@ -111,6 +196,9 @@ fn install() {
         }
     }
 
+    // Register in Add/Remove Programs
+    register_uninstall_entry(&exe_str);
+
     // Start it now
     let _ = std::process::Command::new("schtasks")
         .args(["/run", "/tn", TASK_NAME])
@@ -123,7 +211,7 @@ fn install() {
              Location: {}\n\
              Startup: Scheduled Task \"{}\"\n\n\
              Hold Ctrl+Alt+Shift+E for 10s to restart Explorer.\n\
-             Run \"eee uninstall\" to remove.",
+             Uninstall from Settings > Apps or run \"eee uninstall\".",
             exe_str, TASK_NAME
         ),
         "eee - Installed",
@@ -134,24 +222,44 @@ fn uninstall() {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
 
-    // Stop running instances (other than us)
-    let _ = std::process::Command::new("taskkill")
-        .args(["/F", "/IM", "eee.exe"])
-        .creation_flags(CREATE_NO_WINDOW)
-        .output();
-
     // Delete scheduled task
     let _ = std::process::Command::new("schtasks")
         .args(["/delete", "/tn", TASK_NAME, "/f"])
         .creation_flags(CREATE_NO_WINDOW)
         .output();
 
-    // Remove installed files
-    let dest_dir = install_dir();
-    let _ = std::fs::remove_file(dest_dir.join("eee.exe"));
-    let _ = std::fs::remove_dir(&dest_dir);
+    // Remove Add/Remove Programs entry
+    remove_uninstall_entry();
+
+    // Stop other running instances (exclude our own PID)
+    let our_pid = std::process::id();
+    let _ = std::process::Command::new("cmd")
+        .args([
+            "/c",
+            &format!(
+                "wmic process where \"name='eee.exe' and processid!={}\" call terminate >nul 2>&1",
+                our_pid
+            ),
+        ])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output();
 
     show_message("eee uninstalled successfully.", "eee - Uninstalled");
+
+    // Schedule self-deletion after we exit
+    let dest_dir = install_dir();
+    let dest_exe = dest_dir.join("eee.exe");
+    let _ = std::process::Command::new("cmd")
+        .args([
+            "/c",
+            &format!(
+                "ping -n 2 127.0.0.1 >nul & del /q \"{}\" & rmdir \"{}\"",
+                dest_exe.to_string_lossy(),
+                dest_dir.to_string_lossy()
+            ),
+        ])
+        .creation_flags(CREATE_NO_WINDOW)
+        .spawn();
 }
 
 fn show_message(text: &str, title: &str) {
@@ -487,6 +595,13 @@ fn main() {
             }
             _ => {}
         }
+    }
+
+    // If launched with no args and NOT from the install directory,
+    // treat it as a double-click install.
+    if args.len() == 1 && !is_running_from_install_dir() {
+        install();
+        return;
     }
 
     // Single-instance check — silently exit if already running
