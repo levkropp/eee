@@ -18,6 +18,7 @@ use windows::Win32::System::Threading::CreateMutexW;
 use windows::Win32::UI::Input::KeyboardAndMouse::{
     GetAsyncKeyState, VK_CONTROL, VK_MENU, VK_SHIFT,
 };
+use windows::Win32::UI::Shell::{IsUserAnAdmin, ShellExecuteW};
 use windows::Win32::UI::WindowsAndMessaging::*;
 use windows::core::PCWSTR;
 
@@ -118,7 +119,7 @@ fn register_uninstall_entry(exe_path: &str) {
 
     set_str("DisplayName", "eee");
     set_str("Publisher", "Lev Kropp");
-    set_str("DisplayVersion", "0.1.0");
+    set_str("DisplayVersion", "0.2.1");
     set_str("UninstallString", &format!("\"{}\" uninstall", exe_path));
     set_str("DisplayIcon", exe_path);
     set_str("InstallLocation", &install_dir().to_string_lossy());
@@ -166,7 +167,33 @@ fn kill_existing_instances() {
     std::thread::sleep(Duration::from_millis(300));
 }
 
+fn is_elevated() -> bool {
+    unsafe { IsUserAnAdmin().as_bool() }
+}
+
+fn elevate_self(arg: &str) {
+    let exe = std::env::current_exe().unwrap();
+    let exe_wide = to_wide(&exe.to_string_lossy());
+    let verb = to_wide("runas");
+    let args = to_wide(arg);
+    unsafe {
+        ShellExecuteW(
+            None,
+            PCWSTR(verb.as_ptr()),
+            PCWSTR(exe_wide.as_ptr()),
+            PCWSTR(args.as_ptr()),
+            None,
+            SW_SHOWNORMAL,
+        );
+    }
+}
+
 fn install() {
+    if !is_elevated() {
+        elevate_self("install");
+        return;
+    }
+
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
 
@@ -249,6 +276,11 @@ fn install() {
 }
 
 fn uninstall() {
+    if !is_elevated() {
+        elevate_self("uninstall");
+        return;
+    }
+
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
 

@@ -1,6 +1,6 @@
 [package]
 name = "eee"
-version = "0.1.0"
+version = "0.2.1"
 edition = "2021"
 description = "Hold Ctrl+Alt+Shift+E for 10 seconds to restart explorer.exe"
 
@@ -14,6 +14,7 @@ features = [
     "Win32_Graphics_Gdi",
     "Win32_Security",
     "Win32_System_Registry",
+    "Win32_UI_Shell",
 ]
 
 [profile.release]
